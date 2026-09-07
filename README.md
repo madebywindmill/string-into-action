@@ -12,6 +12,8 @@ String Into Action is a native macOS dev tool for finding and reviewing user-fac
 
 All local. String Into Action has no network features, analytics, accounts, or third-party runtime dependencies.
 
+![String Into Action reviewing a user-facing string in a Swift project](assets/screenshot.png)
+
 ## Features
 
 - Add projects from the open panel or by dragging them from Finder, then switch between them from a compact project sidebar.
