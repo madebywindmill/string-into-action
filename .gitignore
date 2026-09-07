@@ -1,0 +1,9 @@
+.DS_Store
+*.log
+.build/
+DerivedData/
+build/
+*.xcuserstate
+xcuserdata/
+StringIntoAction.xcodeproj/project.xcworkspace/xcuserdata/
+StringIntoAction.xcodeproj/xcuserdata/
