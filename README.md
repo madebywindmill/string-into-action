@@ -56,7 +56,7 @@ Approved and ignored strings remain available from their respective filters. The
 | Focus the string editor | `⌘E` |
 | Approve | `Return` |
 | Approve while editing | `⌘Return` |
-| Approve all queued strings in the file | Hold `⌥` and choose Approve All in File |
+| Approve all queued strings in the file | Choose Approve All in File while viewing a string |
 | Approve all in the file with the keyboard | `⌥Return`, or `⌘⌥Return` while editing |
 | Mark Not User-Facing | `⇧⌘I` |
 

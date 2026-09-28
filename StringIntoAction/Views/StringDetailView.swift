@@ -6,7 +6,6 @@ struct StringDetailView: View {
     let occurrence: StringOccurrence
     @State private var draft: String
     @State private var draftOccurrence: StringOccurrence
-    @StateObject private var optionKey = OptionKeyMonitor()
     @FocusState private var isEditorFocused: Bool
 
     init(occurrence: StringOccurrence) {
@@ -20,8 +19,8 @@ struct StringDetailView: View {
     private var primaryShortcutModifiers: EventModifiers {
         isEditorFocused ? .command : []
     }
-    private var approveShortcutModifiers: EventModifiers {
-        optionKey.isPressed ? primaryShortcutModifiers.union(.option) : primaryShortcutModifiers
+    private var approveAllShortcutModifiers: EventModifiers {
+        primaryShortcutModifiers.union(.option)
     }
 
     var body: some View {
@@ -48,11 +47,6 @@ struct StringDetailView: View {
         .onChange(of: model.stringEditorFocusRequest) { _, _ in
             guard occurrence.isEditable, state != .ignored else { return }
             isEditorFocused = true
-        }
-        .onAppear { optionKey.start() }
-        .onDisappear { optionKey.stop() }
-        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
-            optionKey.refresh()
         }
     }
 
@@ -149,6 +143,14 @@ struct StringDetailView: View {
 
                 Spacer()
 
+                if !hasChanges && model.queuedReviewCount(inFileContaining: occurrence) > 0 {
+                    Button("Approve All in File", systemImage: "checkmark.circle") {
+                        model.approveAllQueuedInFile(containing: occurrence)
+                    }
+                    .buttonStyle(.bordered)
+                    .keyboardShortcut(.return, modifiers: approveAllShortcutModifiers)
+                }
+
                 if hasChanges {
                     Button("Save & Approve", systemImage: "checkmark") {
                         model.saveAndApprove(draft, for: draftOccurrence)
@@ -157,20 +159,11 @@ struct StringDetailView: View {
                     .disabled(!occurrence.isEditable || draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     .keyboardShortcut(.return, modifiers: primaryShortcutModifiers)
                 } else if state != .approved && state != .ignored {
-                    Button {
-                        if optionKey.isPressed {
-                            model.approveAllQueuedInFile(containing: occurrence)
-                        } else {
-                            model.approve(occurrence)
-                        }
-                    } label: {
-                        Label(
-                            optionKey.isPressed ? "Approve All in File" : "Approve",
-                            systemImage: optionKey.isPressed ? "checkmark.circle" : "checkmark"
-                        )
+                    Button("Approve", systemImage: "checkmark") {
+                        model.approve(occurrence)
                     }
                     .buttonStyle(.borderedProminent)
-                    .keyboardShortcut(.return, modifiers: approveShortcutModifiers)
+                    .keyboardShortcut(.return, modifiers: primaryShortcutModifiers)
                 } else {
                     Label(state == .ignored ? "Ignored" : "Approved", systemImage: state.symbol)
                         .font(.subheadline.weight(.semibold))
@@ -226,33 +219,6 @@ struct StringDetailView: View {
                     .stroke(.separator.opacity(0.7), lineWidth: 1)
             }
         }
-    }
-}
-
-@MainActor
-private final class OptionKeyMonitor: ObservableObject {
-    @Published private(set) var isPressed = false
-    private var eventMonitor: Any?
-
-    func start() {
-        guard eventMonitor == nil else { return }
-        refresh()
-        eventMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
-            MainActor.assumeIsolated {
-                self?.isPressed = event.modifierFlags.contains(.option)
-            }
-            return event
-        }
-    }
-
-    func stop() {
-        if let eventMonitor { NSEvent.removeMonitor(eventMonitor) }
-        eventMonitor = nil
-        isPressed = false
-    }
-
-    func refresh() {
-        isPressed = NSEvent.modifierFlags.contains(.option)
     }
 }
 

@@ -105,6 +105,14 @@ final class AppModel {
         }.count
     }
 
+    func queuedReviewCount(inFileContaining occurrence: StringOccurrence) -> Int {
+        occurrences.lazy.filter { candidate in
+            guard candidate.fileURL == occurrence.fileURL else { return false }
+            let state = self.reviewState(for: candidate)
+            return state == .needsReview || state == .changed
+        }.count
+    }
+
     var canApproveAllQueuedStrings: Bool {
         projectURL != nil && !isScanning && reviewCount > 0
     }
@@ -280,11 +288,7 @@ final class AppModel {
         let queued = occurrences.filter { candidate in
             guard candidate.fileURL == occurrence.fileURL else { return false }
             let state = reviewState(for: candidate)
-            return switch filter {
-            case .needsReview: state == .needsReview || state == .changed
-            case .all: state == .needsReview || state == .changed
-            case .approved, .ignored: false
-            }
+            return state == .needsReview || state == .changed
         }
         guard !queued.isEmpty else { return }
 

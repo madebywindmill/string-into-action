@@ -575,11 +575,12 @@ struct StringScannerTests {
 
     @Test @MainActor func approveAllInFileApprovesEveryQueuedStringInThatFile() async throws {
         let root = try temporaryDirectory()
+        let firstFile = root.appending(path: "First.swift")
         try #"""
         Text("First message")
         Text("Second message")
         let possible = "possible message"
-        """#.write(to: root.appending(path: "First.swift"), atomically: true, encoding: .utf8)
+        """#.write(to: firstFile, atomically: true, encoding: .utf8)
         try #"Text("Other file message")"#.write(
             to: root.appending(path: "Second.swift"), atomically: true, encoding: .utf8
         )
@@ -596,6 +597,18 @@ struct StringScannerTests {
         #expect(model.reviewState(for: try #require(model.occurrences.first { $0.value == "Second message" })) == .approved)
         #expect(model.reviewState(for: try #require(model.occurrences.first { $0.value == "possible message" })) == .approved)
         #expect(model.reviewState(for: try #require(model.occurrences.first { $0.value == "Other file message" })) == .needsReview)
+
+        try #"""
+        Text("Welcome again")
+        Text("Second message")
+        let possible = "possible message"
+        """#.write(to: firstFile, atomically: true, encoding: .utf8)
+        model.refresh()
+        while model.isScanning { await Task.yield() }
+
+        let updated = try #require(model.occurrences.first { $0.value == "Welcome again" })
+        #expect([ReviewState.needsReview, .changed].contains(model.reviewState(for: updated)))
+        #expect(model.reviewState(for: try #require(model.occurrences.first { $0.value == "Second message" })) == .approved)
     }
 
     @Test @MainActor func approveAllRequiresConfirmationAndApprovesTheEntireProjectQueue() async throws {
